@@ -64,21 +64,33 @@ async function initBrowser() {
   return { browser, context };
 }
 
+// Get the most recent shop refresh time (7:00 PM GMT-5)
+function getLastShopRefresh() {
+  const now = new Date();
+  const lastRefresh = new Date();
+
+  // Set to 7:00 PM GMT-5 (which is midnight UTC)
+  lastRefresh.setUTCHours(0, 0, 0, 0);
+
+  // If current time is before today's refresh, use yesterday's refresh
+  if (now < lastRefresh) {
+    lastRefresh.setUTCDate(lastRefresh.getUTCDate() - 1);
+  }
+
+  return lastRefresh;
+}
+
 // Check cache validity based on shop refresh schedule
 function isCacheValid() {
   if (!cache.data || !cache.timestamp) {
     return false;
   }
 
-  const nextRefresh = getNextShopRefresh();
-  const now = new Date();
+  const lastRefresh = getLastShopRefresh();
+  const cacheTime = new Date(cache.timestamp);
 
-  // Cache is valid if we haven't reached the next shop refresh time
-  // and the cached data was fetched after the last refresh
-  const lastRefresh = new Date(nextRefresh);
-  lastRefresh.setUTCDate(lastRefresh.getUTCDate() - 1);
-
-  return now < nextRefresh && new Date(cache.timestamp) > lastRefresh;
+  // Cache is valid only if it was created after the last shop refresh
+  return cacheTime > lastRefresh;
 }
 
 // Get time until next shop refresh in seconds
@@ -174,12 +186,47 @@ app.get("/health", (req, res) => {
   });
 });
 
+// Cache management endpoint
+app.post("/api/cache/clear", (req, res) => {
+  cache.data = null;
+  cache.timestamp = null;
+
+  res.json({
+    success: true,
+    message: "Cache cleared successfully",
+    timestamp: new Date().toISOString(),
+  });
+});
+
+// Cache status endpoint
+app.get("/api/cache/status", (req, res) => {
+  const lastRefresh = getLastShopRefresh();
+  const nextRefresh = getNextShopRefresh();
+
+  res.json({
+    success: true,
+    cache: {
+      hasData: !!cache.data,
+      timestamp: cache.timestamp,
+      isValid: isCacheValid(),
+    },
+    shopSchedule: {
+      lastRefresh: lastRefresh.toISOString(),
+      nextRefresh: nextRefresh.toISOString(),
+      secondsUntilRefresh: getSecondsUntilRefresh(),
+    },
+    timestamp: new Date().toISOString(),
+  });
+});
+
 // Root endpoint
 app.get("/", (req, res) => {
   res.json({
     message: "Fortnite Item Shop Scraper API",
     endpoints: {
       "/api/item-shop": "GET - Scrape Fortnite item shop data",
+      "/api/cache/status": "GET - Check cache status and shop schedule",
+      "/api/cache/clear": "POST - Clear cache (force fresh data)",
       "/health": "GET - Health check",
     },
   });
