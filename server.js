@@ -15,8 +15,14 @@ let context = null;
 
 // Simple in-memory cache with shop-aware expiration
 const cache = {
-  data: null,
-  timestamp: null,
+  itemShop: {
+    data: null,
+    timestamp: null,
+  },
+  jamTracks: {
+    data: null,
+    timestamp: null,
+  },
 };
 
 // Calculate next shop refresh time (7:00 PM GMT-5 daily)
@@ -81,13 +87,14 @@ function getLastShopRefresh() {
 }
 
 // Check cache validity based on shop refresh schedule
-function isCacheValid() {
-  if (!cache.data || !cache.timestamp) {
+function isCacheValid(cacheType = "itemShop") {
+  const cacheData = cache[cacheType];
+  if (!cacheData.data || !cacheData.timestamp) {
     return false;
   }
 
   const lastRefresh = getLastShopRefresh();
-  const cacheTime = new Date(cache.timestamp);
+  const cacheTime = new Date(cacheData.timestamp);
 
   // Cache is valid only if it was created after the last shop refresh
   return cacheTime > lastRefresh;
@@ -99,28 +106,25 @@ function getSecondsUntilRefresh() {
   return Math.floor((nextRefresh.getTime() - Date.now()) / 1000);
 }
 
-// Optimized scraping function
-async function scrapeItemShop() {
+// Common scraping function for Fortnite data
+async function scrapeFortniteData(url, cacheType = "itemShop") {
   // Return cached data if valid
-  if (isCacheValid()) {
-    console.log("Returning cached data");
-    return cache.data;
+  if (isCacheValid(cacheType)) {
+    console.log(`Returning cached ${cacheType} data`);
+    return cache[cacheType].data;
   }
 
   const { context: browserContext } = await initBrowser();
   const page = await browserContext.newPage();
 
   try {
-    console.log("Fetching fresh item shop data...");
+    console.log(`Fetching fresh ${cacheType} data...`);
 
     // Direct API request - this is the most efficient approach
-    const response = await page.goto(
-      "https://www.fortnite.com/item-shop?lang=en-US&_data=routes%2Fitem-shop._index",
-      {
-        waitUntil: "domcontentloaded",
-        timeout: 15000,
-      }
-    );
+    const response = await page.goto(url, {
+      waitUntil: "domcontentloaded",
+      timeout: 15000,
+    });
 
     const contentType = response.headers()["content-type"] || "";
 
@@ -130,16 +134,32 @@ async function scrapeItemShop() {
     data = await response.json();
 
     // Cache the successful response
-    cache.data = data;
-    cache.timestamp = Date.now();
+    cache[cacheType].data = data;
+    cache[cacheType].timestamp = Date.now();
 
     await page.close();
     return data;
   } catch (error) {
     await page.close();
-    console.error("Error scraping item shop:", error);
+    console.error(`Error scraping ${cacheType}:`, error);
     throw error;
   }
+}
+
+// Optimized scraping function for item shop
+async function scrapeItemShop() {
+  return await scrapeFortniteData(
+    "https://www.fortnite.com/item-shop?lang=en-US&_data=routes%2Fitem-shop._index",
+    "itemShop"
+  );
+}
+
+// Scraping function for jam tracks
+async function scrapeJamTracks() {
+  return await scrapeFortniteData(
+    "https://www.fortnite.com/item-shop/jam-tracks?lang=en-US&_data=routes%2Fitem-shop.jam-tracks._index",
+    "jamTracks"
+  );
 }
 
 // API endpoint with shop-aware caching
@@ -159,7 +179,7 @@ app.get("/api/item-shop", async (req, res) => {
       success: true,
       data: data,
       timestamp: new Date().toISOString(),
-      cached: isCacheValid(),
+      cached: isCacheValid("itemShop"),
       shopInfo: {
         nextRefresh: nextRefresh.toISOString(),
         refreshesIn: `${Math.floor(secondsUntilRefresh / 3600)}h ${Math.floor(
@@ -178,6 +198,42 @@ app.get("/api/item-shop", async (req, res) => {
   }
 });
 
+// API endpoint for jam tracks
+app.get("/api/jam-tracks", async (req, res) => {
+  try {
+    console.log("Received request for jam tracks data");
+    const data = await scrapeJamTracks();
+    const nextRefresh = getNextShopRefresh();
+    const secondsUntilRefresh = getSecondsUntilRefresh();
+
+    // Set cache headers based on shop refresh schedule
+    if (secondsUntilRefresh > 0) {
+      res.set("Cache-Control", `public, max-age=${secondsUntilRefresh}`);
+    }
+
+    res.json({
+      success: true,
+      data: data,
+      timestamp: new Date().toISOString(),
+      cached: isCacheValid("jamTracks"),
+      shopInfo: {
+        nextRefresh: nextRefresh.toISOString(),
+        refreshesIn: `${Math.floor(secondsUntilRefresh / 3600)}h ${Math.floor(
+          (secondsUntilRefresh % 3600) / 60
+        )}m`,
+        refreshTime: "7:00 PM GMT-5 daily",
+      },
+    });
+  } catch (error) {
+    console.error("Error in /api/jam-tracks:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({
@@ -188,14 +244,33 @@ app.get("/health", (req, res) => {
 
 // Cache management endpoint
 app.post("/api/cache/clear", (req, res) => {
-  cache.data = null;
-  cache.timestamp = null;
+  const { type } = req.body;
 
-  res.json({
-    success: true,
-    message: "Cache cleared successfully",
-    timestamp: new Date().toISOString(),
-  });
+  if (type === "itemShop" || type === "jamTracks") {
+    cache[type].data = null;
+    cache[type].timestamp = null;
+    res.json({
+      success: true,
+      message: `${type} cache cleared successfully`,
+      timestamp: new Date().toISOString(),
+    });
+  } else if (type === "all" || !type) {
+    cache.itemShop.data = null;
+    cache.itemShop.timestamp = null;
+    cache.jamTracks.data = null;
+    cache.jamTracks.timestamp = null;
+    res.json({
+      success: true,
+      message: "All caches cleared successfully",
+      timestamp: new Date().toISOString(),
+    });
+  } else {
+    res.status(400).json({
+      success: false,
+      error: "Invalid cache type. Use 'itemShop', 'jamTracks', or 'all'",
+      timestamp: new Date().toISOString(),
+    });
+  }
 });
 
 // Cache status endpoint
@@ -206,9 +281,16 @@ app.get("/api/cache/status", (req, res) => {
   res.json({
     success: true,
     cache: {
-      hasData: !!cache.data,
-      timestamp: cache.timestamp,
-      isValid: isCacheValid(),
+      itemShop: {
+        hasData: !!cache.itemShop.data,
+        timestamp: cache.itemShop.timestamp,
+        isValid: isCacheValid("itemShop"),
+      },
+      jamTracks: {
+        hasData: !!cache.jamTracks.data,
+        timestamp: cache.jamTracks.timestamp,
+        isValid: isCacheValid("jamTracks"),
+      },
     },
     shopSchedule: {
       lastRefresh: lastRefresh.toISOString(),
@@ -225,8 +307,10 @@ app.get("/", (req, res) => {
     message: "Fortnite Item Shop Scraper API",
     endpoints: {
       "/api/item-shop": "GET - Scrape Fortnite item shop data",
+      "/api/jam-tracks": "GET - Scrape Fortnite jam tracks data",
       "/api/cache/status": "GET - Check cache status and shop schedule",
-      "/api/cache/clear": "POST - Clear cache (force fresh data)",
+      "/api/cache/clear":
+        "POST - Clear cache (force fresh data). Body: { type: 'itemShop'|'jamTracks'|'all' }",
       "/health": "GET - Health check",
     },
   });
@@ -255,5 +339,6 @@ app.listen(PORT, () => {
   console.log(`Server running on http://localhost:${PORT}`);
   console.log("Available endpoints:");
   console.log("  GET /api/item-shop - Scrape Fortnite item shop");
+  console.log("  GET /api/jam-tracks - Scrape Fortnite jam tracks");
   console.log("  GET /health - Health check");
 });
