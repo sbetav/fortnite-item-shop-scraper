@@ -86,18 +86,19 @@ function getLastShopRefresh() {
   return lastRefresh;
 }
 
-// Check cache validity based on shop refresh schedule
+// Check cache validity based on 30-minute expiration
 function isCacheValid(cacheType = "itemShop") {
   const cacheData = cache[cacheType];
   if (!cacheData.data || !cacheData.timestamp) {
     return false;
   }
 
-  const lastRefresh = getLastShopRefresh();
   const cacheTime = new Date(cacheData.timestamp);
+  const now = new Date();
+  const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
 
-  // Cache is valid only if it was created after the last shop refresh
-  return cacheTime > lastRefresh;
+  // Cache is valid if it was created within the last 30 minutes
+  return cacheTime > thirtyMinutesAgo;
 }
 
 // Get time until next shop refresh in seconds
@@ -167,25 +168,18 @@ app.get("/api/item-shop", async (req, res) => {
   try {
     console.log("Received request for item shop data");
     const data = await scrapeItemShop();
-    const nextRefresh = getNextShopRefresh();
-    const secondsUntilRefresh = getSecondsUntilRefresh();
 
-    // Set cache headers based on shop refresh schedule
-    if (secondsUntilRefresh > 0) {
-      res.set("Cache-Control", `public, max-age=${secondsUntilRefresh}`);
-    }
+    // Set cache headers to 30 minutes
+    res.set("Cache-Control", "public, max-age=1800");
 
     res.json({
       success: true,
       data: data,
       timestamp: new Date().toISOString(),
       cached: isCacheValid("itemShop"),
-      shopInfo: {
-        nextRefresh: nextRefresh.toISOString(),
-        refreshesIn: `${Math.floor(secondsUntilRefresh / 3600)}h ${Math.floor(
-          (secondsUntilRefresh % 3600) / 60
-        )}m`,
-        refreshTime: "7:00 PM GMT-5 daily",
+      cacheInfo: {
+        expiresIn: "30 minutes",
+        cacheDuration: "30 minutes",
       },
     });
   } catch (error) {
@@ -203,25 +197,18 @@ app.get("/api/jam-tracks", async (req, res) => {
   try {
     console.log("Received request for jam tracks data");
     const data = await scrapeJamTracks();
-    const nextRefresh = getNextShopRefresh();
-    const secondsUntilRefresh = getSecondsUntilRefresh();
 
-    // Set cache headers based on shop refresh schedule
-    if (secondsUntilRefresh > 0) {
-      res.set("Cache-Control", `public, max-age=${secondsUntilRefresh}`);
-    }
+    // Set cache headers to 30 minutes
+    res.set("Cache-Control", "public, max-age=1800");
 
     res.json({
       success: true,
       data: data,
       timestamp: new Date().toISOString(),
       cached: isCacheValid("jamTracks"),
-      shopInfo: {
-        nextRefresh: nextRefresh.toISOString(),
-        refreshesIn: `${Math.floor(secondsUntilRefresh / 3600)}h ${Math.floor(
-          (secondsUntilRefresh % 3600) / 60
-        )}m`,
-        refreshTime: "7:00 PM GMT-5 daily",
+      cacheInfo: {
+        expiresIn: "30 minutes",
+        cacheDuration: "30 minutes",
       },
     });
   } catch (error) {
@@ -275,9 +262,6 @@ app.post("/api/cache/clear", (req, res) => {
 
 // Cache status endpoint
 app.get("/api/cache/status", (req, res) => {
-  const lastRefresh = getLastShopRefresh();
-  const nextRefresh = getNextShopRefresh();
-
   res.json({
     success: true,
     cache: {
@@ -292,10 +276,9 @@ app.get("/api/cache/status", (req, res) => {
         isValid: isCacheValid("jamTracks"),
       },
     },
-    shopSchedule: {
-      lastRefresh: lastRefresh.toISOString(),
-      nextRefresh: nextRefresh.toISOString(),
-      secondsUntilRefresh: getSecondsUntilRefresh(),
+    cacheSettings: {
+      duration: "30 minutes",
+      maxAge: 1800,
     },
     timestamp: new Date().toISOString(),
   });
