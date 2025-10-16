@@ -23,6 +23,10 @@ const cache = {
     data: null,
     timestamp: null,
   },
+  item: {
+    data: null,
+    timestamp: null,
+  },
 };
 
 // Calculate next shop refresh time (7:00 PM GMT-5 daily)
@@ -163,6 +167,12 @@ async function scrapeJamTracks() {
   );
 }
 
+// Scraping function for individual items
+async function scrapeItem(assetType, itemId, bundleName = "%24bundleName") {
+  const url = `https://www.fortnite.com/item-shop/${assetType}/${itemId}?lang=en-US&_data=routes%2Fitem-shop.${assetType}.${bundleName}`;
+  return await scrapeFortniteData(url, "item");
+}
+
 // API endpoint with shop-aware caching
 app.get("/api/item-shop", async (req, res) => {
   try {
@@ -221,6 +231,54 @@ app.get("/api/jam-tracks", async (req, res) => {
   }
 });
 
+// API endpoint for individual items
+app.get("/api/item/:assetType/:itemId", async (req, res) => {
+  try {
+    const { assetType, itemId } = req.params;
+    const { bundleName } = req.query;
+
+    // Validate parameters
+    if (!assetType || !itemId) {
+      return res.status(400).json({
+        success: false,
+        error: "Both assetType and itemId are required",
+        timestamp: new Date().toISOString(),
+      });
+    }
+
+    console.log(
+      `Received request for item data: ${assetType}/${itemId}${
+        bundleName ? ` with bundleName: ${bundleName}` : ""
+      }`
+    );
+    const data = await scrapeItem(assetType, itemId, bundleName);
+
+    // Set cache headers to 30 minutes
+    res.set("Cache-Control", "public, max-age=1800");
+
+    res.json({
+      success: true,
+      data: data,
+      assetType: assetType,
+      itemId: itemId,
+      bundleName: bundleName || "%24bundleName",
+      timestamp: new Date().toISOString(),
+      cached: isCacheValid("item"),
+      cacheInfo: {
+        expiresIn: "30 minutes",
+        cacheDuration: "30 minutes",
+      },
+    });
+  } catch (error) {
+    console.error("Error in /api/item:", error);
+    res.status(500).json({
+      success: false,
+      error: error.message,
+      timestamp: new Date().toISOString(),
+    });
+  }
+});
+
 // Health check endpoint
 app.get("/health", (req, res) => {
   res.json({
@@ -233,7 +291,7 @@ app.get("/health", (req, res) => {
 app.post("/api/cache/clear", (req, res) => {
   const { type } = req.body;
 
-  if (type === "itemShop" || type === "jamTracks") {
+  if (type === "itemShop" || type === "jamTracks" || type === "item") {
     cache[type].data = null;
     cache[type].timestamp = null;
     res.json({
@@ -246,6 +304,8 @@ app.post("/api/cache/clear", (req, res) => {
     cache.itemShop.timestamp = null;
     cache.jamTracks.data = null;
     cache.jamTracks.timestamp = null;
+    cache.item.data = null;
+    cache.item.timestamp = null;
     res.json({
       success: true,
       message: "All caches cleared successfully",
@@ -254,7 +314,8 @@ app.post("/api/cache/clear", (req, res) => {
   } else {
     res.status(400).json({
       success: false,
-      error: "Invalid cache type. Use 'itemShop', 'jamTracks', or 'all'",
+      error:
+        "Invalid cache type. Use 'itemShop', 'jamTracks', 'item', or 'all'",
       timestamp: new Date().toISOString(),
     });
   }
@@ -275,6 +336,11 @@ app.get("/api/cache/status", (req, res) => {
         timestamp: cache.jamTracks.timestamp,
         isValid: isCacheValid("jamTracks"),
       },
+      item: {
+        hasData: !!cache.item.data,
+        timestamp: cache.item.timestamp,
+        isValid: isCacheValid("item"),
+      },
     },
     cacheSettings: {
       duration: "30 minutes",
@@ -291,9 +357,11 @@ app.get("/", (req, res) => {
     endpoints: {
       "/api/item-shop": "GET - Scrape Fortnite item shop data",
       "/api/jam-tracks": "GET - Scrape Fortnite jam tracks data",
+      "/api/item/:assetType/:itemId":
+        "GET - Scrape Fortnite item data (e.g., /api/item/bundles/ravemello-35c6f4c5?bundleName=customName)",
       "/api/cache/status": "GET - Check cache status and shop schedule",
       "/api/cache/clear":
-        "POST - Clear cache (force fresh data). Body: { type: 'itemShop'|'jamTracks'|'all' }",
+        "POST - Clear cache (force fresh data). Body: { type: 'itemShop'|'jamTracks'|'item'|'all' }",
       "/health": "GET - Health check",
     },
   });
@@ -323,5 +391,8 @@ app.listen(PORT, () => {
   console.log("Available endpoints:");
   console.log("  GET /api/item-shop - Scrape Fortnite item shop");
   console.log("  GET /api/jam-tracks - Scrape Fortnite jam tracks");
+  console.log(
+    "  GET /api/item/:assetType/:itemId - Scrape Fortnite item data"
+  );
   console.log("  GET /health - Health check");
 });
