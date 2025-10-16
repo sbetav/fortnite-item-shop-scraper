@@ -23,7 +23,6 @@ const cache = {
     data: null,
     timestamp: null,
   },
-  items: {}, // Cache for individual items using itemId as key
 };
 
 // Calculate next shop refresh time (7:00 PM GMT-5 daily)
@@ -102,21 +101,6 @@ function isCacheValid(cacheType = "itemShop") {
   return cacheTime > thirtyMinutesAgo;
 }
 
-// Check if a specific item is cached and valid
-function isItemCacheValid(itemId) {
-  const itemCache = cache.items[itemId];
-  if (!itemCache || !itemCache.data || !itemCache.timestamp) {
-    return false;
-  }
-
-  const cacheTime = new Date(itemCache.timestamp);
-  const now = new Date();
-  const thirtyMinutesAgo = new Date(now.getTime() - 30 * 60 * 1000);
-
-  // Cache is valid if it was created within the last 30 minutes
-  return cacheTime > thirtyMinutesAgo;
-}
-
 // Get time until next shop refresh in seconds
 function getSecondsUntilRefresh() {
   const nextRefresh = getNextShopRefresh();
@@ -179,14 +163,8 @@ async function scrapeJamTracks() {
   );
 }
 
-// Scraping function for individual items with item-specific caching
+// Scraping function for individual items (no caching)
 async function scrapeItem(assetType, itemId) {
-  // Check if this specific item is already cached
-  if (isItemCacheValid(itemId)) {
-    console.log(`Returning cached data for item: ${itemId}`);
-    return cache.items[itemId].data;
-  }
-
   // For bundles, use hardcoded "bundles" in the _data parameter
   // For other asset types, use %24assetType (which is $assetType)
   const dataParam =
@@ -209,12 +187,6 @@ async function scrapeItem(assetType, itemId) {
     });
 
     const data = await response.json();
-
-    // Cache the item data
-    cache.items[itemId] = {
-      data: data,
-      timestamp: Date.now(),
-    };
 
     await page.close();
     return data;
@@ -300,20 +272,12 @@ app.get("/api/item/:assetType/:itemId", async (req, res) => {
     console.log(`Received request for item data: ${assetType}/${itemId}`);
     const data = await scrapeItem(assetType, itemId);
 
-    // Set cache headers to 30 minutes
-    res.set("Cache-Control", "public, max-age=1800");
-
     res.json({
       success: true,
       data: data,
       assetType: assetType,
       itemId: itemId,
       timestamp: new Date().toISOString(),
-      cached: isItemCacheValid(itemId),
-      cacheInfo: {
-        expiresIn: "30 minutes",
-        cacheDuration: "30 minutes",
-      },
     });
   } catch (error) {
     console.error("Error in /api/item:", error);
@@ -345,19 +309,11 @@ app.post("/api/cache/clear", (req, res) => {
       message: `${type} cache cleared successfully`,
       timestamp: new Date().toISOString(),
     });
-  } else if (type === "items") {
-    cache.items = {};
-    res.json({
-      success: true,
-      message: "Items cache cleared successfully",
-      timestamp: new Date().toISOString(),
-    });
   } else if (type === "all" || !type) {
     cache.itemShop.data = null;
     cache.itemShop.timestamp = null;
     cache.jamTracks.data = null;
     cache.jamTracks.timestamp = null;
-    cache.items = {};
     res.json({
       success: true,
       message: "All caches cleared successfully",
@@ -366,8 +322,7 @@ app.post("/api/cache/clear", (req, res) => {
   } else {
     res.status(400).json({
       success: false,
-      error:
-        "Invalid cache type. Use 'itemShop', 'jamTracks', 'items', or 'all'",
+      error: "Invalid cache type. Use 'itemShop', 'jamTracks', or 'all'",
       timestamp: new Date().toISOString(),
     });
   }
@@ -375,11 +330,6 @@ app.post("/api/cache/clear", (req, res) => {
 
 // Cache status endpoint
 app.get("/api/cache/status", (req, res) => {
-  const itemCacheEntries = Object.keys(cache.items).length;
-  const validItemCaches = Object.keys(cache.items).filter((itemId) =>
-    isItemCacheValid(itemId)
-  ).length;
-
   res.json({
     success: true,
     cache: {
@@ -392,12 +342,6 @@ app.get("/api/cache/status", (req, res) => {
         hasData: !!cache.jamTracks.data,
         timestamp: cache.jamTracks.timestamp,
         isValid: isCacheValid("jamTracks"),
-      },
-      items: {
-        totalEntries: itemCacheEntries,
-        validEntries: validItemCaches,
-        expiredEntries: itemCacheEntries - validItemCaches,
-        cachedItems: Object.keys(cache.items),
       },
     },
     cacheSettings: {
@@ -419,7 +363,7 @@ app.get("/", (req, res) => {
         "GET - Scrape Fortnite item data (e.g., /api/item/bundles/ravemello-35c6f4c5 or /api/item/outfits/lycan-west-db80c774)",
       "/api/cache/status": "GET - Check cache status and shop schedule",
       "/api/cache/clear":
-        "POST - Clear cache (force fresh data). Body: { type: 'itemShop'|'jamTracks'|'items'|'all' }",
+        "POST - Clear cache (force fresh data). Body: { type: 'itemShop'|'jamTracks'|'all' }",
       "/health": "GET - Health check",
     },
   });
