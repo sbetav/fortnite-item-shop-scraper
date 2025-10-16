@@ -168,8 +168,14 @@ async function scrapeJamTracks() {
 }
 
 // Scraping function for individual items
-async function scrapeItem(assetType, itemId, bundleName = "%24bundleName") {
-  const url = `https://www.fortnite.com/item-shop/${assetType}/${itemId}?lang=en-US&_data=routes%2Fitem-shop.${assetType}.${bundleName}`;
+async function scrapeItem(assetType, itemId, itemName = null) {
+  // For bundles, use hardcoded "bundles" in the _data parameter
+  // For other asset types, use %24assetType (which is $assetType)
+  const dataParam = assetType === "bundles" 
+    ? `routes%2Fitem-shop.bundles.%24bundleName`
+    : `routes%2Fitem-shop.%24assetType.%24assetName`;
+  
+  const url = `https://www.fortnite.com/item-shop/${assetType}/${itemId}?lang=en-US&_data=${dataParam}`;
   return await scrapeFortniteData(url, "item");
 }
 
@@ -235,7 +241,6 @@ app.get("/api/jam-tracks", async (req, res) => {
 app.get("/api/item/:assetType/:itemId", async (req, res) => {
   try {
     const { assetType, itemId } = req.params;
-    const { bundleName } = req.query;
 
     // Validate parameters
     if (!assetType || !itemId) {
@@ -246,12 +251,8 @@ app.get("/api/item/:assetType/:itemId", async (req, res) => {
       });
     }
 
-    console.log(
-      `Received request for item data: ${assetType}/${itemId}${
-        bundleName ? ` with bundleName: ${bundleName}` : ""
-      }`
-    );
-    const data = await scrapeItem(assetType, itemId, bundleName);
+    console.log(`Received request for item data: ${assetType}/${itemId}`);
+    const data = await scrapeItem(assetType, itemId);
 
     // Set cache headers to 30 minutes
     res.set("Cache-Control", "public, max-age=1800");
@@ -261,7 +262,6 @@ app.get("/api/item/:assetType/:itemId", async (req, res) => {
       data: data,
       assetType: assetType,
       itemId: itemId,
-      bundleName: bundleName || "%24bundleName",
       timestamp: new Date().toISOString(),
       cached: isCacheValid("item"),
       cacheInfo: {
@@ -358,7 +358,7 @@ app.get("/", (req, res) => {
       "/api/item-shop": "GET - Scrape Fortnite item shop data",
       "/api/jam-tracks": "GET - Scrape Fortnite jam tracks data",
       "/api/item/:assetType/:itemId":
-        "GET - Scrape Fortnite item data (e.g., /api/item/bundles/ravemello-35c6f4c5?bundleName=customName)",
+        "GET - Scrape Fortnite item data (e.g., /api/item/bundles/ravemello-35c6f4c5 or /api/item/outfits/lycan-west-db80c774)",
       "/api/cache/status": "GET - Check cache status and shop schedule",
       "/api/cache/clear":
         "POST - Clear cache (force fresh data). Body: { type: 'itemShop'|'jamTracks'|'item'|'all' }",
