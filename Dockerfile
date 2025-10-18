@@ -17,7 +17,7 @@ WORKDIR /app
 COPY package*.json ./
 
 # Install dependencies
-RUN npm ci --only=production
+RUN npm ci
 
 # Install Playwright browsers
 RUN npx playwright install chromium
@@ -26,8 +26,11 @@ RUN npx playwright install-deps chromium
 # Copy source code
 COPY . .
 
+# Build TypeScript
+RUN npm run build
+
 # Expose port
 EXPOSE 3333
 
 # Start the application
-CMD ["node", "server.js"]
+CMD ["node", "dist/server.js"]

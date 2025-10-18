@@ -2,20 +2,29 @@
   "name": "fortnite-item-shop-scraper",
   "version": "1.0.0",
   "description": "Node.js server that scrapes Fortnite item shop using Playwright to bypass Cloudflare",
-  "main": "server.js",
+  "main": "dist/server.js",
   "scripts": {
-    "start": "node server.js",
-    "dev": "nodemon server.js",
-    "build": "echo 'No build step required'",
+    "start": "node dist/server.js",
+    "dev": "nodemon --exec ts-node src/server.ts",
+    "build": "tsc",
+    "build:watch": "tsc --watch",
     "postinstall": "npx playwright install chromium"
   },
   "dependencies": {
     "express": "^4.18.2",
     "playwright": "^1.40.0",
-    "cors": "^2.8.5"
+    "cors": "^2.8.5",
+    "xmldom": "^0.6.0",
+    "axios": "^1.6.0"
   },
   "devDependencies": {
-    "nodemon": "^3.0.2"
+    "nodemon": "^3.0.2",
+    "typescript": "^5.3.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.10.0",
+    "@types/express": "^4.17.21",
+    "@types/cors": "^2.8.17",
+    "@types/xmldom": "^0.1.31"
   },
   "keywords": [
     "fortnite",
