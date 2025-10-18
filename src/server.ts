@@ -66,14 +66,19 @@ async function shutdown() {
 process.on("SIGINT", shutdown);
 process.on("SIGTERM", shutdown);
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
-  console.log("Available endpoints:");
-  console.log("  GET /api/item-shop - Scrape Fortnite item shop");
-  console.log("  GET /api/jam-tracks - Scrape Fortnite jam tracks");
-  console.log(
-    "  GET /api/item-shop/item/:assetType/:itemId - Scrape Fortnite item data"
-  );
-  console.log("  POST /api/jam-tracks - Process jam track URLs");
-  console.log("  GET /health - Health check");
-});
+app
+  .listen(PORT, "0.0.0.0", () => {
+    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    console.log("Available endpoints:");
+    console.log("  GET /api/item-shop - Scrape Fortnite item shop");
+    console.log("  GET /api/jam-tracks - Scrape Fortnite jam tracks");
+    console.log(
+      "  GET /api/item-shop/item/:assetType/:itemId - Scrape Fortnite item data"
+    );
+    console.log("  POST /api/jam-tracks - Process jam track URLs");
+    console.log("  GET /health - Health check");
+  })
+  .on("error", (error: any) => {
+    console.error("Server failed to start:", error);
+    process.exit(1);
+  });
