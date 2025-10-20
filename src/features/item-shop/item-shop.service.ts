@@ -65,14 +65,22 @@ export class ItemShopService {
     assetType: string,
     itemId: string
   ): Promise<ItemData> {
-    // For bundles, use hardcoded "bundles" in the _data parameter
-    // For other asset types, use %24assetType (which is $assetType)
-    const dataParam =
-      assetType === "bundles"
-        ? `routes%2Fitem-shop.bundles.%24bundleName`
-        : `routes%2Fitem-shop.%24assetType.%24assetName`;
+    let url: string;
+    let dataParam: string;
 
-    const url = `https://www.fortnite.com/item-shop/${assetType}/${itemId}?lang=en-US&_data=${dataParam}`;
+    // Handle special case for bundles (uses %24bundleName instead of %24assetName)
+    if (assetType === "bundles") {
+      dataParam = `routes%2Fitem-shop.bundles.%24bundleName`;
+    } else if (assetType === "jamtrack" || assetType === "jam-tracks") {
+      // For jam tracks, use the jam-tracks path with the correct _data parameter
+      dataParam = `routes%2Fitem-shop.jam-tracks.%24assetName`;
+      assetType = "jam-tracks"; // Normalize to jam-tracks for URL
+    } else {
+      // For other asset types, use %24assetType (which is $assetType)
+      dataParam = `routes%2Fitem-shop.%24assetType.%24assetName`;
+    }
+
+    url = `https://www.fortnite.com/item-shop/${assetType}/${itemId}?lang=en-US&_data=${dataParam}`;
 
     const context = await this.browserService.getContext();
     const page = await context.newPage();
