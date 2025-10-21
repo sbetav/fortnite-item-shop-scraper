@@ -20,8 +20,8 @@ export const APP_CONFIG = {
 } as const;
 
 export const API_ENDPOINTS = {
-  ITEM_SHOP:
-    "https://www.fortnite.com/item-shop?lang=en-US&_data=routes%2Fitem-shop._index",
-  JAM_TRACKS:
-    "https://www.fortnite.com/item-shop/jam-tracks?lang=en-US&_data=routes%2Fitem-shop.jam-tracks._index",
+  ITEM_SHOP: (lang: string = 'en-US') =>
+    `https://www.fortnite.com/item-shop?lang=${lang}&_data=routes%2Fitem-shop._index`,
+  JAM_TRACKS: (lang: string = 'en-US') =>
+    `https://www.fortnite.com/item-shop/jam-tracks?lang=${lang}&_data=routes%2Fitem-shop.jam-tracks._index`,
 } as const;

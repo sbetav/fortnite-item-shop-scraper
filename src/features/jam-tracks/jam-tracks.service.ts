@@ -2,9 +2,9 @@ import { BrowserService } from "../../shared/browser/browser.service";
 import { AudioProcessorService } from "./audio-processor.service";
 import { APP_CONFIG, API_ENDPOINTS } from "../../config/app.config";
 import {
-    JamTracksData,
-    JamTrackRequest,
-    JamTrackResponse,
+  JamTracksData,
+  JamTrackRequest,
+  JamTrackResponse,
 } from "./jam-tracks.types";
 import { PlaylistInfo } from "../../shared/types/api.types";
 
@@ -48,7 +48,7 @@ export class JamTracksService {
    * Scrape jam tracks data
    */
   public async scrapeJamTracks(): Promise<JamTracksData> {
-    return await this.scrapeFortniteData(API_ENDPOINTS.JAM_TRACKS);
+    return await this.scrapeFortniteData(API_ENDPOINTS.JAM_TRACKS());
   }
 
   /**

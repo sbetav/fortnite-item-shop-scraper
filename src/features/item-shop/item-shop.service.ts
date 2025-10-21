@@ -1,6 +1,11 @@
 import { BrowserService } from "../../shared/browser/browser.service";
 import { APP_CONFIG, API_ENDPOINTS } from "../../config/app.config";
-import { ItemShopData, ItemData } from "./item-shop.types";
+import {
+  ItemShopData,
+  ItemData,
+  SupportedLanguage,
+  DEFAULT_LANGUAGE,
+} from "./item-shop.types";
 
 export class ItemShopService {
   private browserService: BrowserService;
@@ -39,8 +44,10 @@ export class ItemShopService {
   /**
    * Scrape item shop data
    */
-  public async scrapeItemShop(): Promise<ItemShopData> {
-    return await this.scrapeFortniteData(API_ENDPOINTS.ITEM_SHOP);
+  public async scrapeItemShop(
+    lang: SupportedLanguage = DEFAULT_LANGUAGE
+  ): Promise<ItemShopData> {
+    return await this.scrapeFortniteData(API_ENDPOINTS.ITEM_SHOP(lang));
   }
 
   /**
@@ -48,7 +55,8 @@ export class ItemShopService {
    */
   public async scrapeItem(
     assetType: string,
-    itemId: string
+    itemId: string,
+    lang: SupportedLanguage = DEFAULT_LANGUAGE
   ): Promise<ItemData> {
     let url: string;
     let dataParam: string;
@@ -65,7 +73,7 @@ export class ItemShopService {
       dataParam = `routes%2Fitem-shop.%24assetType.%24assetName`;
     }
 
-    url = `https://www.fortnite.com/item-shop/${assetType}/${itemId}?lang=en-US&_data=${dataParam}`;
+    url = `https://www.fortnite.com/item-shop/${assetType}/${itemId}?lang=${lang}&_data=${dataParam}`;
 
     const context = await this.browserService.getContext();
     const page = await context.newPage();

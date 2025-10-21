@@ -15,8 +15,12 @@ export const authenticateApiKey = (
   const apiKey = req.headers["x-api-key"] as string;
   const validApiKey = process.env.API_KEY;
 
-  // Skip authentication for health check and root endpoints
-  if (req.path === "/health" || req.path === "/") {
+  // Skip authentication for health check, root endpoints, and languages endpoint
+  if (
+    req.path === "/health" ||
+    req.path === "/" ||
+    req.path.endsWith("/languages")
+  ) {
     return next();
   }
 

@@ -52,10 +52,12 @@ app.get("/", (_req, res) => {
   res.json({
     message: "Fortnite Item Shop Scraper API",
     endpoints: {
-      "/api/item-shop": "GET - Scrape Fortnite item shop data",
-      "/api/jam-tracks": "GET - Scrape Fortnite jam tracks data",
+      "/api/item-shop":
+        "GET - Scrape Fortnite item shop data (supports ?lang=XX parameter)",
+      "/api/item-shop/languages": "GET - Get list of supported languages",
       "/api/item-shop/item/:assetType/:itemId":
-        "GET - Scrape Fortnite item data (e.g., /api/item-shop/item/bundles/ravemello-35c6f4c5 or /api/item-shop/item/outfits/lycan-west-db80c774)",
+        "GET - Scrape Fortnite item data (supports ?lang=XX parameter) (e.g., /api/item-shop/item/bundles/ravemello-35c6f4c5 or /api/item-shop/item/outfits/lycan-west-db80c774)",
+      "/api/jam-tracks": "GET - Scrape Fortnite jam tracks data",
       "/api/jam-tracks (POST)":
         'POST - Process jam track URLs and return audio data. Body: { url: "qsep://..." }',
       "/api/jam-tracks/audio":
@@ -87,12 +89,15 @@ process.on("SIGTERM", shutdown);
 
 app
   .listen(PORT, "0.0.0.0", () => {
-    console.log(`Server running on http://0.0.0.0:${PORT}`);
+    console.log(`Server running on http://localhost:${PORT}`);
     console.log("Available endpoints:");
-    console.log("  GET /api/item-shop - Scrape Fortnite item shop");
+    console.log(
+      "  GET /api/item-shop - Scrape Fortnite item shop (supports ?lang=XX)"
+    );
+    console.log("  GET /api/item-shop/languages - Get supported languages");
     console.log("  GET /api/jam-tracks - Scrape Fortnite jam tracks");
     console.log(
-      "  GET /api/item-shop/item/:assetType/:itemId - Scrape Fortnite item data"
+      "  GET /api/item-shop/item/:assetType/:itemId - Scrape Fortnite item data (supports ?lang=XX)"
     );
     console.log("  POST /api/jam-tracks - Process jam track URLs");
     console.log("  GET /health - Health check");
