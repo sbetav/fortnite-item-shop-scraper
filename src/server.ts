@@ -1,7 +1,23 @@
+import dotenv from "dotenv";
 import express from "express";
-import cors from "cors";
 import { BrowserService } from "./shared/browser/browser.service";
 import { APP_CONFIG } from "./config/app.config";
+
+// Load environment variables
+dotenv.config();
+
+// Import security middleware
+import { authenticateApiKey } from "./middleware/auth.middleware";
+import {
+  generalRateLimit,
+  scrapingRateLimit,
+  cacheRateLimit,
+} from "./middleware/rate-limit.middleware";
+import {
+  securityHeaders,
+  corsMiddleware,
+} from "./middleware/security.middleware";
+import { requestLogger, errorLogger } from "./middleware/logging.middleware";
 
 // Import routes
 import itemShopRoutes from "./features/item-shop/item-shop.routes";
@@ -11,14 +27,20 @@ import cacheRoutes from "./features/cache/cache.routes";
 const app = express();
 const PORT = APP_CONFIG.PORT;
 
-// Middleware
-app.use(cors());
+// Security middleware (order matters!)
+app.use(securityHeaders);
+app.use(corsMiddleware);
+app.use(requestLogger);
+app.use(generalRateLimit);
 app.use(express.json());
 
-// Routes
-app.use("/api/item-shop", itemShopRoutes);
-app.use("/api/jam-tracks", jamTracksRoutes);
-app.use("/api/cache", cacheRoutes);
+// API Key authentication for all API routes
+app.use("/api", authenticateApiKey);
+
+// Routes with specific rate limiting
+app.use("/api/item-shop", scrapingRateLimit, itemShopRoutes);
+app.use("/api/jam-tracks", scrapingRateLimit, jamTracksRoutes);
+app.use("/api/cache", cacheRateLimit, cacheRoutes);
 
 // Health check endpoint
 app.get("/health", (_req, res) => {
@@ -50,6 +72,9 @@ app.get("/", (_req, res) => {
     },
   });
 });
+
+// Error handling middleware
+app.use(errorLogger);
 
 // Graceful shutdown
 async function shutdown() {
