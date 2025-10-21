@@ -3,26 +3,6 @@ export interface ApiResponse<T = any> {
   data?: T;
   error?: string;
   timestamp: string;
-  cached?: boolean;
-  cacheInfo?: {
-    expiresIn: string;
-    cacheDuration: string;
-  };
-}
-
-export interface CacheInfo {
-  hasData: boolean;
-  timestamp: number | null;
-  isValid: boolean;
-}
-
-export interface CacheStatus {
-  itemShop: CacheInfo;
-  jamTracks: CacheInfo;
-  cacheSettings: {
-    duration: string;
-    maxAge: number;
-  };
 }
 
 export interface JamTrackRequest {

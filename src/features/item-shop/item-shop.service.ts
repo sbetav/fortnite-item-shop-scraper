@@ -1,35 +1,23 @@
 import { BrowserService } from "../../shared/browser/browser.service";
-import { CacheService } from "../cache/cache.service";
 import { APP_CONFIG, API_ENDPOINTS } from "../../config/app.config";
 import { ItemShopData, ItemData } from "./item-shop.types";
 
 export class ItemShopService {
   private browserService: BrowserService;
-  private cacheService: CacheService;
 
   constructor() {
     this.browserService = BrowserService.getInstance();
-    this.cacheService = CacheService.getInstance();
   }
 
   /**
    * Common scraping function for Fortnite data
    */
-  private async scrapeFortniteData(
-    url: string,
-    cacheType: "itemShop" | "jamTracks"
-  ): Promise<any> {
-    // Return cached data if valid
-    const cachedData = this.cacheService.getCachedData(cacheType);
-    if (cachedData) {
-      return cachedData;
-    }
-
+  private async scrapeFortniteData(url: string): Promise<any> {
     const context = await this.browserService.getContext();
     const page = await context.newPage();
 
     try {
-      console.log(`Fetching fresh ${cacheType} data...`);
+      console.log(`Fetching fresh data...`);
 
       // Direct API request - this is the most efficient approach
       const response = await page.goto(url, {
@@ -39,14 +27,11 @@ export class ItemShopService {
 
       const data = await response!.json();
 
-      // Cache the successful response
-      this.cacheService.setCacheData(cacheType, data);
-
       await page.close();
       return data;
     } catch (error) {
       await page.close();
-      console.error(`Error scraping ${cacheType}:`, error);
+      console.error(`Error scraping data:`, error);
       throw error;
     }
   }
@@ -55,7 +40,7 @@ export class ItemShopService {
    * Scrape item shop data
    */
   public async scrapeItemShop(): Promise<ItemShopData> {
-    return await this.scrapeFortniteData(API_ENDPOINTS.ITEM_SHOP, "itemShop");
+    return await this.scrapeFortniteData(API_ENDPOINTS.ITEM_SHOP);
   }
 
   /**

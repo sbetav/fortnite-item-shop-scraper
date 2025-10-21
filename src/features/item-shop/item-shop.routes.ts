@@ -1,11 +1,9 @@
 import { Router, Request, Response } from "express";
 import { ItemShopService } from "./item-shop.service";
 import { ApiResponse } from "../../shared/types/api.types";
-import { CacheService } from "../cache/cache.service";
 
 const router = Router();
 const itemShopService = new ItemShopService();
-const cacheService = CacheService.getInstance();
 
 /**
  * Item shop endpoint
@@ -15,18 +13,10 @@ router.get("/", async (_req: Request, res: Response) => {
     console.log("Received request for item shop data");
     const data = await itemShopService.scrapeItemShop();
 
-    // Set cache headers to 30 minutes
-    res.set("Cache-Control", "public, max-age=1800");
-
     const response: ApiResponse = {
       success: true,
       data: data,
       timestamp: new Date().toISOString(),
-      cached: cacheService.isCacheValid("itemShop"),
-      cacheInfo: {
-        expiresIn: "30 minutes",
-        cacheDuration: "30 minutes",
-      },
     };
 
     return res.json(response);

@@ -2,11 +2,9 @@ import { Router, Request, Response } from "express";
 import axios from "axios";
 import { JamTracksService } from "./jam-tracks.service";
 import { ApiResponse } from "../../shared/types/api.types";
-import { CacheService } from "../cache/cache.service";
 
 const router = Router();
 const jamTracksService = new JamTracksService();
-const cacheService = CacheService.getInstance();
 
 /**
  * Jam tracks endpoint
@@ -16,18 +14,10 @@ router.get("/", async (_req: Request, res: Response) => {
     console.log("Received request for jam tracks data");
     const data = await jamTracksService.scrapeJamTracks();
 
-    // Set cache headers to 30 minutes
-    res.set("Cache-Control", "public, max-age=1800");
-
     const response: ApiResponse = {
       success: true,
       data: data,
       timestamp: new Date().toISOString(),
-      cached: cacheService.isCacheValid("jamTracks"),
-      cacheInfo: {
-        expiresIn: "30 minutes",
-        cacheDuration: "30 minutes",
-      },
     };
 
     return res.json(response);

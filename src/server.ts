@@ -11,7 +11,6 @@ import { authenticateApiKey } from "./middleware/auth.middleware";
 import {
   generalRateLimit,
   scrapingRateLimit,
-  cacheRateLimit,
 } from "./middleware/rate-limit.middleware";
 import {
   securityHeaders,
@@ -22,7 +21,6 @@ import { requestLogger, errorLogger } from "./middleware/logging.middleware";
 // Import routes
 import itemShopRoutes from "./features/item-shop/item-shop.routes";
 import jamTracksRoutes from "./features/jam-tracks/jam-tracks.routes";
-import cacheRoutes from "./features/cache/cache.routes";
 
 const app = express();
 const PORT = APP_CONFIG.PORT;
@@ -40,7 +38,6 @@ app.use("/api", authenticateApiKey);
 // Routes with specific rate limiting
 app.use("/api/item-shop", scrapingRateLimit, itemShopRoutes);
 app.use("/api/jam-tracks", scrapingRateLimit, jamTracksRoutes);
-app.use("/api/cache", cacheRateLimit, cacheRoutes);
 
 // Health check endpoint
 app.get("/health", (_req, res) => {
@@ -65,9 +62,6 @@ app.get("/", (_req, res) => {
         'POST - Download jam track audio directly. Body: { url: "qsep://..." }',
       "/api/jam-tracks/stream":
         'POST - Stream jam track audio. Body: { url: "qsep://..." }',
-      "/api/cache/status": "GET - Check cache status and shop schedule",
-      "/api/cache/clear":
-        'POST - Clear cache (force fresh data). Body: { type: "itemShop"|"jamTracks"|"all" }',
       "/health": "GET - Health check",
     },
   });
