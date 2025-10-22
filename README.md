@@ -301,17 +301,6 @@ npm test         # Run tests
 - **Input Validation**: Parameter and request validation
 - **Error Handling**: Secure error responses without sensitive data
 
-## 📊 Error Handling
-
-The API includes comprehensive error handling:
-
-- **Network Timeouts**: Configurable timeouts for all operations
-- **Cloudflare Protection**: Automatic bypass using Playwright
-- **JSON Parsing**: Robust error handling for malformed responses
-- **Browser Management**: Graceful browser initialization and cleanup
-- **Rate Limit Exceeded**: Clear error messages for rate limit violations
-- **Authentication Errors**: Secure authentication failure responses
-
 ## 🚀 Deployment
 
 ### Docker Deployment
@@ -334,32 +323,6 @@ railway login
 railway link
 railway up
 ```
-
-## 📚 Dependencies
-
-### Core Dependencies
-
-- **express**: Web framework
-- **playwright**: Browser automation and scraping
-- **typescript**: Type safety and development experience
-
-### Middleware & Security
-
-- **helmet**: Security headers
-- **cors**: Cross-origin resource sharing
-- **express-rate-limit**: Rate limiting
-
-### Audio Processing
-
-- **axios**: HTTP client for audio segment fetching
-- **xmldom**: XML parsing for audio playlists
-
-### Development
-
-- **@types/node**: Node.js type definitions
-- **@types/express**: Express type definitions
-- **ts-node**: TypeScript execution
-- **nodemon**: Development auto-restart
 
 ## 🤝 Contributing
 
