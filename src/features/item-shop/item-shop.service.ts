@@ -111,6 +111,8 @@ export class ItemShopService {
     } else if (assetType === "jamtrack" || assetType === "jam-tracks") {
       dataParam = `routes%2Fitem-shop.jam-tracks.%24assetName`;
       assetType = "jam-tracks";
+    } else if (assetType === "packs") {
+      dataParam = `routes%2Fitem-shop.packs.%24packName`;
     } else {
       dataParam = `routes%2Fitem-shop.%24assetType.%24assetName`;
     }
