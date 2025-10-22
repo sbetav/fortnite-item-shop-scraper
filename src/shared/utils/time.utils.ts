@@ -1,5 +1,20 @@
 /**
- * Calculate next shop refresh time (7:00 PM GMT-5 daily)
+ * Time Utilities
+ *
+ * This module provides utility functions for calculating Fortnite item shop
+ * refresh times and related time-based operations. The item shop refreshes
+ * daily at 7:00 PM GMT-5 (midnight UTC).
+ *
+ * @fileoverview Time utility functions for Fortnite Item Shop Scraper API
+ */
+
+/**
+ * Calculate Next Shop Refresh Time
+ *
+ * Calculates the next Fortnite item shop refresh time.
+ * The shop refreshes daily at 7:00 PM GMT-5 (midnight UTC).
+ *
+ * @returns Date - The next shop refresh time
  */
 export function getNextShopRefresh(): Date {
   const now = new Date();
@@ -17,7 +32,12 @@ export function getNextShopRefresh(): Date {
 }
 
 /**
- * Get the most recent shop refresh time (7:00 PM GMT-5)
+ * Get the Most Recent Shop Refresh Time
+ *
+ * Calculates the most recent Fortnite item shop refresh time.
+ * Returns yesterday's refresh if the current time is before today's refresh.
+ *
+ * @returns Date - The most recent shop refresh time
  */
 export function getLastShopRefresh(): Date {
   const now = new Date();
@@ -35,7 +55,12 @@ export function getLastShopRefresh(): Date {
 }
 
 /**
- * Get time until next shop refresh in seconds
+ * Get Time Until Next Shop Refresh
+ *
+ * Calculates the number of seconds until the next shop refresh.
+ * Useful for caching and determining when to fetch fresh data.
+ *
+ * @returns number - Seconds until the next shop refresh
  */
 export function getSecondsUntilRefresh(): number {
   const nextRefresh = getNextShopRefresh();

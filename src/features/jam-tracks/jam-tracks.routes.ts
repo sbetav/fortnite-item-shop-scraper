@@ -1,3 +1,14 @@
+/**
+ * Jam Tracks Routes
+ *
+ * This module defines all HTTP routes for the jam tracks feature.
+ * It handles requests for jam tracks data, URL processing, audio streaming,
+ * and direct audio downloads. All routes require API key authentication and
+ * are subject to rate limiting.
+ *
+ * @fileoverview Express routes for Fortnite Jam Tracks Scraper API
+ */
+
 import { Router, Request, Response } from "express";
 import axios from "axios";
 import { JamTracksService } from "./jam-tracks.service";
@@ -7,11 +18,18 @@ const router = Router();
 const jamTracksService = new JamTracksService();
 
 /**
- * Jam tracks endpoint
+ * GET /api/jam-tracks
+ *
+ * Fetches the complete Fortnite jam tracks data from the official API.
+ *
+ * Response:
+ * - 200: Success with jam tracks data
+ * - 500: Server error
+ *
+ * Rate Limit: 20 requests per 15 minutes
  */
 router.get("/", async (_req: Request, res: Response) => {
   try {
-    console.log("Received request for jam tracks data");
     const data = await jamTracksService.scrapeJamTracks();
 
     const response: ApiResponse = {
@@ -33,13 +51,26 @@ router.get("/", async (_req: Request, res: Response) => {
 });
 
 /**
- * Jam track URL processing endpoint
+ * POST /api/jam-tracks
+ *
+ * Processes a qsep:// URL and returns jam track data with audio information.
+ * This endpoint handles the conversion and processing of jam track URLs.
+ *
+ * Request Body:
+ * - url (required): The qsep:// URL to process
+ *
+ * Response:
+ * - 200: Success with processed jam track data
+ * - 400: Bad request (missing URL)
+ * - 500: Server error
+ *
+ * Rate Limit: 20 requests per 15 minutes
  */
 router.post("/", async (req: Request, res: Response) => {
   try {
     const { url } = req.body;
 
-    // Validate input
+    // Validate required input
     if (!url) {
       const response: ApiResponse = {
         success: false,
@@ -63,7 +94,21 @@ router.post("/", async (req: Request, res: Response) => {
 });
 
 /**
- * Stream jam track audio endpoint (for large files)
+ * POST /api/jam-tracks/stream
+ *
+ * Streams jam track audio in real-time for large files.
+ * This endpoint processes a qsep:// URL and streams the audio segments
+ * as they are fetched, making it suitable for large audio files.
+ *
+ * Request Body:
+ * - url (required): The qsep:// URL to stream
+ *
+ * Response:
+ * - 200: Audio stream (Content-Type: audio/mp4)
+ * - 400: Bad request (invalid URL)
+ * - 500: Server error
+ *
+ * Rate Limit: 20 requests per 15 minutes
  */
 router.post("/stream", async (req: Request, res: Response) => {
   try {
@@ -75,12 +120,9 @@ router.post("/stream", async (req: Request, res: Response) => {
 
     const { playlistInfo } = await jamTracksService.streamJamTrack(url);
 
-    // Set streaming headers
     res.setHeader("Content-Type", "audio/mp4");
     res.setHeader("Transfer-Encoding", "chunked");
     res.setHeader("Cache-Control", "no-cache");
-
-    // Stream segments as they're fetched
     for (const segment of playlistInfo.segments) {
       try {
         const segmentResponse = await axios.get(segment.url, {
@@ -98,13 +140,27 @@ router.post("/stream", async (req: Request, res: Response) => {
 
     return res.end();
   } catch (error: any) {
-    console.error("Error in /api/jam-track/stream:", error);
+    console.error("Error in /api/jam-tracks/stream:", error);
     return res.status(500).json({ error: error.message });
   }
 });
 
 /**
- * Direct jam track audio download endpoint
+ * POST /api/jam-tracks/audio
+ *
+ * Downloads jam track audio directly as a complete file.
+ * This endpoint processes a qsep:// URL and downloads all audio segments,
+ * combining them into a single audio file for download.
+ *
+ * Request Body:
+ * - url (required): The qsep:// URL to download
+ *
+ * Response:
+ * - 200: Audio file download (Content-Type: audio/mp4)
+ * - 400: Bad request (missing or invalid URL)
+ * - 500: Server error
+ *
+ * Rate Limit: 20 requests per 15 minutes
  */
 router.post("/audio", async (req: Request, res: Response) => {
   try {
@@ -130,15 +186,12 @@ router.post("/audio", async (req: Request, res: Response) => {
 
     const audioBuffer = await jamTracksService.downloadJamTrackAudio(url);
 
-    // Set headers for audio download
     res.setHeader("Content-Type", "audio/mp4");
     res.setHeader("Content-Disposition", 'attachment; filename="audio.mp4"');
     res.setHeader("Content-Length", audioBuffer.length);
-
-    // Send the audio buffer directly
     return res.send(audioBuffer);
   } catch (error: any) {
-    console.error("Error in /api/jam-track/audio:", error);
+    console.error("Error in /api/jam-tracks/audio:", error);
     const response: ApiResponse = {
       success: false,
       error: error.message,

@@ -1,3 +1,13 @@
+/**
+ * Audio Processor Service
+ *
+ * This service handles the processing of audio data from jam tracks.
+ * It parses XML playlists, fetches audio segments, and combines them
+ * into complete audio files. Used for jam track audio processing.
+ *
+ * @fileoverview Audio processing service for Fortnite Jam Tracks
+ */
+
 import { DOMParser } from "xmldom";
 import axios from "axios";
 import { APP_CONFIG } from "../../config/app.config";
@@ -7,22 +17,36 @@ import {
   AudioBuffer,
 } from "../../shared/types/api.types";
 
+/**
+ * Audio Processor Service Class
+ *
+ * Handles all audio processing operations including:
+ * - XML playlist parsing
+ * - Audio segment fetching
+ * - Audio buffer combination
+ */
 export class AudioProcessorService {
   /**
-   * Parse XML playlist and extract segment URLs
+   * Parse XML Playlist and Extract Segment URLs
+   *
+   * Parses an XML playlist (MPD format) and extracts audio segment information.
+   * This method handles the complex XML structure to identify audio segments
+   * and their metadata for subsequent fetching.
+   *
+   * @param xmlContent - The XML playlist content as a string
+   * @param baseUrl - Base URL for constructing segment URLs
+   * @returns PlaylistInfo - Parsed playlist information with segment URLs
+   * @throws Error if XML parsing fails or required elements are missing
    */
   public parsePlaylistXML(xmlContent: string, baseUrl: string): PlaylistInfo {
     try {
       const parser = new DOMParser();
       const xmlDoc = parser.parseFromString(xmlContent, "text/xml");
 
-      // Extract BaseURL if not provided
       const baseUrlElement = xmlDoc.getElementsByTagName("BaseURL")[0];
       const actualBaseUrl = baseUrlElement
         ? baseUrlElement.textContent || baseUrl
         : baseUrl;
-
-      // Find SegmentTemplate
       const segmentTemplate = xmlDoc.getElementsByTagName("SegmentTemplate")[0];
       if (!segmentTemplate) {
         throw new Error("No SegmentTemplate found in playlist");
@@ -41,18 +65,14 @@ export class AudioProcessorService {
         segmentTemplate.getAttribute("startNumber") || "1"
       );
 
-      // Calculate total duration and number of segments
-      const segmentDuration = duration / timescale; // duration of each segment in seconds
-      const totalDuration = segmentDuration; // This is the duration of each segment, not total
-
-      // Get the actual total duration from the MPD
+      const segmentDuration = duration / timescale;
+      const totalDuration = segmentDuration;
       const mediaPresentationDuration = xmlDoc
         .getElementsByTagName("MPD")[0]
         ?.getAttribute("mediaPresentationDuration");
-      let actualTotalDuration = totalDuration; // fallback
+      let actualTotalDuration = totalDuration;
 
       if (mediaPresentationDuration) {
-        // Parse PT30.464S format
         const match = mediaPresentationDuration.match(/PT(\d+(?:\.\d+)?)S/);
         if (match) {
           actualTotalDuration = parseFloat(match[1]);
@@ -60,15 +80,7 @@ export class AudioProcessorService {
       }
 
       const totalSegments = Math.ceil(actualTotalDuration / segmentDuration);
-
-      console.log(`Segment duration: ${segmentDuration}s`);
-      console.log(`Total duration: ${actualTotalDuration}s`);
-      console.log(`Calculated segments: ${totalSegments}`);
-
-      // Generate segment URLs
       const segments: AudioSegment[] = [];
-
-      // Add initialization segment
       if (initialization) {
         const initUrl = initialization.replace("$RepresentationID$", "0");
         segments.push({
@@ -78,7 +90,6 @@ export class AudioProcessorService {
         });
       }
 
-      // Add media segments
       for (let i = startNumber; i < startNumber + totalSegments; i++) {
         const segmentUrl = media
           .replace("$RepresentationID$", "0")
@@ -89,11 +100,6 @@ export class AudioProcessorService {
           number: i,
         });
       }
-
-      console.log(`Generated ${segments.length} segments:`);
-      segments.forEach((seg) => {
-        console.log(`  ${seg.type} ${seg.number}: ${seg.url}`);
-      });
 
       return {
         baseUrl: actualBaseUrl,
@@ -109,19 +115,23 @@ export class AudioProcessorService {
   }
 
   /**
-   * Fetch all audio segments and combine them
+   * Fetch All Audio Segments and Combine Them
+   *
+   * Downloads all audio segments from the provided segment URLs and combines
+   * them into a single audio buffer. Handles errors gracefully and continues
+   * with available segments even if some fail to download.
+   *
+   * @param segments - Array of audio segments to fetch
+   * @returns Promise<Buffer> - Combined audio buffer containing all segments
+   * @throws Error if no segments can be fetched successfully
    */
   public async fetchAudioSegments(segments: AudioSegment[]): Promise<Buffer> {
     try {
-      console.log(`Fetching ${segments.length} audio segments...`);
       const audioBuffers: AudioBuffer[] = [];
       const failedSegments: number[] = [];
 
       for (const segment of segments) {
         try {
-          console.log(
-            `Fetching segment ${segment.number} (${segment.type}): ${segment.url}`
-          );
           const response = await axios.get(segment.url, {
             responseType: "arraybuffer",
             timeout: APP_CONFIG.AUDIO_SEGMENT_TIMEOUT,
@@ -132,33 +142,17 @@ export class AudioProcessorService {
             number: segment.number,
             type: segment.type,
           });
-
-          console.log(
-            `Successfully fetched segment ${
-              segment.number
-            } (${Buffer.byteLength(response.data)} bytes)`
-          );
         } catch (error: any) {
           console.error(
             `Error fetching segment ${segment.number}:`,
             error.message
           );
           failedSegments.push(segment.number);
-          // Continue with other segments even if one fails
         }
       }
 
-      console.log(
-        `Successfully fetched ${audioBuffers.length}/${segments.length} segments`
-      );
-      if (failedSegments.length > 0) {
-        console.log(`Failed segments: ${failedSegments.join(", ")}`);
-      }
-
-      // Sort buffers by segment number to maintain correct order
       audioBuffers.sort((a, b) => a.number - b.number);
 
-      // Combine all buffers
       const totalLength = audioBuffers.reduce(
         (sum, buffer) => sum + buffer.data.length,
         0
@@ -171,9 +165,6 @@ export class AudioProcessorService {
         offset += buffer.data.length;
       }
 
-      console.log(
-        `Combined audio: ${combinedBuffer.length} bytes from ${audioBuffers.length} segments`
-      );
       return combinedBuffer;
     } catch (error) {
       console.error("Error fetching audio segments:", error);

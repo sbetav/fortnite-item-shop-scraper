@@ -1,7 +1,20 @@
+/**
+ * Rate Limiting Middleware
+ *
+ * This module provides rate limiting functionality to prevent API abuse and ensure
+ * fair usage. It includes both general rate limiting and stricter limits for
+ * resource-intensive scraping operations.
+ *
+ * @fileoverview Rate limiting middleware for Fortnite Item Shop Scraper API
+ */
+
 import rateLimit from "express-rate-limit";
 
 /**
- * General rate limiting for all API endpoints
+ * General Rate Limiting
+ *
+ * Applies to all API endpoints to prevent basic abuse.
+ * Allows 100 requests per 15-minute window per IP address.
  */
 export const generalRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -16,7 +29,11 @@ export const generalRateLimit = rateLimit({
 });
 
 /**
- * Strict rate limiting for scraping endpoints
+ * Scraping Rate Limiting
+ *
+ * Stricter rate limiting for resource-intensive scraping operations.
+ * Allows 20 requests per 15-minute window per IP address.
+ * Applied to /api/item-shop and /api/jam-tracks endpoints.
  */
 export const scrapingRateLimit = rateLimit({
   windowMs: 15 * 60 * 1000, // 15 minutes
@@ -29,4 +46,3 @@ export const scrapingRateLimit = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
 });
-
