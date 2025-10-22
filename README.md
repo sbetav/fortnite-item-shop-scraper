@@ -37,7 +37,7 @@ A comprehensive Node.js REST API that scrapes Fortnite item shop data and jam tr
 
    ```bash
    git clone <repository-url>
-   cd fortnite-item-shop-scrapper
+   cd fortnite-item-shop-scraper
    ```
 
 2. **Install dependencies:**
