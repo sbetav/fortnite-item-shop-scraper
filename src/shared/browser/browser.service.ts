@@ -50,6 +50,7 @@ export class BrowserService {
    *
    * Initializes a new Playwright browser instance with optimized settings
    * for web scraping. Uses headless mode and performance-optimized arguments.
+   * Disables caching to ensure fresh data on each request.
    *
    * @returns Promise<{ browser: Browser; context: BrowserContext }> - Browser and context instances
    * @throws Error if browser initialization fails
@@ -64,10 +65,17 @@ export class BrowserService {
         args: [...APP_CONFIG.BROWSER_ARGS],
       });
 
-      // Create persistent context with configured settings
+      // Create persistent context with configured settings and disabled caching
       this.context = await this.browser.newContext({
         userAgent: APP_CONFIG.USER_AGENT,
         viewport: APP_CONFIG.VIEWPORT,
+        // Disable caching to ensure fresh data
+        ignoreHTTPSErrors: true,
+        extraHTTPHeaders: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0'
+        }
       });
     }
 

@@ -48,7 +48,7 @@ export class JamTracksService {
    *
    * A reusable method that handles the common pattern of scraping data from
    * Fortnite's API endpoints. It uses the browser service to make requests
-   * and parse JSON responses.
+   * with cache-busting headers to ensure fresh data and parses JSON responses.
    *
    * @param url - The Fortnite API endpoint URL to scrape
    * @returns Promise<any> - The parsed JSON data from the API
@@ -59,7 +59,10 @@ export class JamTracksService {
     const page = await context.newPage();
 
     try {
-      const response = await page.goto(url, {
+      // Add cache-busting parameter to URL
+      const cacheBustingUrl = `${url}${url.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+      
+      const response = await page.goto(cacheBustingUrl, {
         waitUntil: "domcontentloaded",
         timeout: APP_CONFIG.BROWSER_TIMEOUT,
       });
@@ -119,7 +122,10 @@ export class JamTracksService {
     const page = await context.newPage();
 
     try {
-      const response = await page.goto(cleanUrl, {
+      // Add cache-busting parameter to URL
+      const cacheBustingUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+      
+      const response = await page.goto(cacheBustingUrl, {
         waitUntil: "domcontentloaded",
         timeout: APP_CONFIG.BROWSER_TIMEOUT,
       });
@@ -210,7 +216,10 @@ export class JamTracksService {
     const page = await context.newPage();
 
     try {
-      const response = await page.goto(cleanUrl, {
+      // Add cache-busting parameter to URL
+      const cacheBustingUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+      
+      const response = await page.goto(cacheBustingUrl, {
         waitUntil: "domcontentloaded",
         timeout: APP_CONFIG.BROWSER_TIMEOUT,
       });
@@ -225,12 +234,14 @@ export class JamTracksService {
           data.metadata?.baseUrls?.[0] || ""
         );
 
+        await page.close();
         return { playlistInfo };
       }
 
       throw new Error("No audio data found");
-    } finally {
+    } catch (error) {
       await page.close();
+      throw error;
     }
   }
 
@@ -258,7 +269,10 @@ export class JamTracksService {
     const page = await context.newPage();
 
     try {
-      const response = await page.goto(cleanUrl, {
+      // Add cache-busting parameter to URL
+      const cacheBustingUrl = `${cleanUrl}${cleanUrl.includes('?') ? '&' : '?'}_t=${Date.now()}`;
+      
+      const response = await page.goto(cacheBustingUrl, {
         waitUntil: "domcontentloaded",
         timeout: APP_CONFIG.BROWSER_TIMEOUT,
       });
@@ -281,6 +295,7 @@ export class JamTracksService {
             playlistInfo.segments
           );
 
+          await page.close();
           return audioBuffer;
         }
       }

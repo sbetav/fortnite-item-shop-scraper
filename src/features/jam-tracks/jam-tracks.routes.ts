@@ -122,7 +122,6 @@ router.post("/stream", async (req: Request, res: Response) => {
 
     res.setHeader("Content-Type", "audio/mp4");
     res.setHeader("Transfer-Encoding", "chunked");
-    res.setHeader("Cache-Control", "no-cache");
     for (const segment of playlistInfo.segments) {
       try {
         const segmentResponse = await axios.get(segment.url, {
