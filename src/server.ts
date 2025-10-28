@@ -38,6 +38,9 @@ import jamTracksRoutes from "./features/jam-tracks/jam-tracks.routes";
 const app = express();
 const PORT = APP_CONFIG.PORT;
 
+// Configure Express to trust proxy headers (required for Render deployment)
+app.set("trust proxy", true);
+
 /**
  * Middleware Configuration
  *
